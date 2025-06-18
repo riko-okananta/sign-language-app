@@ -9,7 +9,7 @@ import os
 app = Flask(__name__)
 
 # Load the trained ResNet50V2 model
-model = tf.keras.models.load_model('SLD_ResNet50V2_FT.h5')
+model = tf.keras.models.load_model('SLD_ResNet50V2_FT.tflite')
 
 # Initialize webcam
 camera = cv2.VideoCapture(0)

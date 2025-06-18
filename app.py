@@ -1,4 +1,3 @@
-# app.py
 from flask import Flask, render_template, Response
 import cv2
 import numpy as np
@@ -8,8 +7,11 @@ import os
 
 app = Flask(__name__)
 
-# Load the trained ResNet50V2 model
-model = tf.keras.models.load_model('SLD_ResNet50V2_FT.tflite')
+# Load the TFLite model
+interpreter = tf.lite.Interpreter(model_path='SLD_ResNet50V2_FT.tflite')
+interpreter.allocate_tensors()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
 # Initialize webcam
 camera = cv2.VideoCapture(0)
@@ -22,6 +24,8 @@ def preprocess_frame(frame):
     frame = cv2.resize(frame, (224, 224))
     # Normalize pixel values
     frame = frame / 255.0
+    # Convert to FLOAT32 for TFLite
+    frame = frame.astype(np.float32)
     # Expand dimensions for model input
     frame = np.expand_dims(frame, axis=0)
     return frame
@@ -29,10 +33,14 @@ def preprocess_frame(frame):
 def predict_sign(frame):
     # Preprocess frame
     processed_frame = preprocess_frame(frame)
-    # Make prediction
-    prediction = model.predict(processed_frame)
+    # Set input tensor
+    interpreter.set_tensor(input_details[0]['index'], processed_frame)
+    # Run inference
+    interpreter.invoke()
+    # Get output tensor
+    output_data = interpreter.get_tensor(output_details[0]['index'])
     # Get predicted class
-    predicted_class = labels[np.argmax(prediction)]
+    predicted_class = labels[np.argmax(output_data)]
     return predicted_class
 
 def generate_frames():
@@ -54,7 +62,7 @@ def generate_frames():
 
 @app.route('/')
 def index():
-    return render_template('template/index.html')
+    return render_template('index.html')
 
 @app.route('/video_feed')
 def video_feed():
